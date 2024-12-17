@@ -89,28 +89,46 @@ import { getDatabase, ref as dbRef, set, get, onValue } from "https://www.gstati
 
 const firebaseConfig = {
   apiKey: "AIzaSyBhTL7JcmGtdwPpJyKkwMRoIEOIU17ZxUk",
-  authDomain: "tapalka-c9556.firebaseapp.com",
-  databaseURL: "https://tapalka-c9556-default-rtdb.firebaseio.com",
-  projectId: "tapalka-c9556",
-  storageBucket: "tapalka-c9556.firebasestorage.app",
-  messagingSenderId: "386428968826",
-  appId: "1:386428968826:web:de56837a0bbc2cf27940c3",
-  measurementId: "G-YENX5XCT8J"
+  authDomain: "tapalka-c9556.firebaseapp.com",
+  databaseURL: "https://tapalka-c9556-default-rtdb.firebaseio.com",
+  projectId: "tapalka-c9556",
+  storageBucket: "tapalka-c9556.firebasestorage.app",
+  messagingSenderId: "386428968826",
+  appId: "1:386428968826:web:de56837a0bbc2cf27940c3",
+  measurementId: "G-YENX5XCT8J"
 };
-
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const likeCount = ref(0);
-let username;
+const username = ref("");
 
-const getUser = () => {
-    username = "username";
+// Функция для получения или установки имени пользователя
+const getOrSetUsername = async () => {
+  const usernameRef = dbRef(db, `users/${username.value}`);
+  try {
+    const snapshot = await get(usernameRef);
+    if (snapshot.exists()) {
+      // Если имя пользователя уже существует, используем его
+      username.value = snapshot.val().username;
+    } else {
+      // Если имя пользователя не существует, запрашиваем его у пользователя
+      username.value = prompt("Введите ваше имя пользователя:");
+      if (username.value) {
+        // Сохраняем имя пользователя в базе данных
+        await set(usernameRef, { username: username.value });
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching or setting username:", error);
+  }
 };
 
 const tap = async () => {
-  username = getUser();
-  const countsRef = dbRef(db, `counts/${username}`);
+  if (!username.value) {
+    await getOrSetUsername();
+  }
+  const countsRef = dbRef(db, `counts/${username.value}`);
   try {
     const snapshot = await get(countsRef);
     let tap = snapshot.exists() ? snapshot.val().count : 0;
@@ -122,10 +140,11 @@ const tap = async () => {
   }
 };
 
-
 const fetchInitialLikeCount = async () => {
-  username = getUser();
-  const countsRef = dbRef(db, `counts/${username}`);
+  if (!username.value) {
+    await getOrSetUsername();
+  }
+  const countsRef = dbRef(db, `counts/${username.value}`);
   try {
     const snapshot = await get(countsRef);
     if (snapshot.exists()) {
@@ -135,6 +154,7 @@ const fetchInitialLikeCount = async () => {
     console.error("Error fetching initial taps count:", error);
   }
 };
+
 onMounted(fetchInitialLikeCount);
 </script>
 
